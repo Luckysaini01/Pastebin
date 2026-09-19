@@ -1,0 +1,9 @@
+node_modules
+pastes.json
+pastes.db
+.env
+
+# Tunnel/server logs
+*.log
+pastes.db-wal
+pastes.db-shm

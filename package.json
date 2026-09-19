@@ -1,0 +1,19 @@
+{
+  "name": "my-pastebin",
+  "version": "1.0.0",
+  "description": "Simple pastebin website built with Node.js and Express",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "share": "cloudflared tunnel --url http://localhost:3000",
+    "share:lt": "npx --yes localtunnel --port 3000"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

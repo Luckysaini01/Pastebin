@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Paste - MyPastebin</title>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --radius: 12px;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+            --code-bg: #f8fafc;
+            --code-border: #e2e8f0;
+            --comment-bg: #fefce8;
+            --comment-border: #fef08a;
+            --comment-text: #713f12;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 860px;
+        }
+
+        /* Protocol warning */
+        .protocol-warning {
+            display: none;
+            background-color: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        /* Top Bar Navigation */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .btn-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--primary);
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-home:hover {
+            background-color: #f9fafb;
+            border-color: #d1d5db;
+        }
+
+        /* Main Display Card */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+
+        /* Header Info */
+        .paste-header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 24px;
+        }
+
+        .paste-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 12.5px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .paste-badge {
+            background-color: #e0e7ff;
+            color: #3730a3;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .paste-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1.3;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+
+        .paste-description {
+            font-size: 15px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        /* Comment Yellow Box */
+        .comment-box {
+            display: none;
+            background-color: var(--comment-bg);
+            border: 1px solid var(--comment-border);
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin-bottom: 24px;
+            color: var(--comment-text);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .comment-header {
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Toolbar Actions */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .btn-tool {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            background-color: #ffffff;
+            color: #374151;
+            transition: all 0.15s ease-in-out;
+            user-select: none;
+        }
+
+        .btn-tool:hover {
+            background-color: #f3f4f6;
+            border-color: #d1d5db;
+        }
+
+        .btn-tool.btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-tool.btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-tool.btn-save {
+            background-color: #059669;
+            color: white;
+            border-color: #059669;
+        }
+
+        .btn-tool.btn-save:hover {
+            background-color: #047857;
+        }
+
+        .btn-tool.btn-cancel {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border-color: #fecaca;
+        }
+
+        .btn-tool.btn-cancel:hover {
+            background-color: #fee2e2;
+        }
+
+        /* Content Box */
+        .content-box-container {
+            position: relative;
+        }
+
+        pre.paste-content {
+            background-color: var(--code-bg);
+            border: 1px solid var(--code-border);
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #0f172a;
+            min-height: 200px;
+            max-height: 700px;
+            overflow-y: auto;
+            tab-size: 4;
+        }
+
+        textarea.edit-content-area {
+            width: 100%;
+            min-height: 300px;
+            max-height: 700px;
+            padding: 20px;
+            font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            background-color: #fff;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            color: #0f172a;
+            outline: none;
+            resize: vertical;
+            display: none;
+            white-space: pre;
+            tab-size: 4;
+        }
+
+        /* Edit status badge */
+        .edit-notice {
+            display: none;
+            font-size: 13px;
+            color: #b45309;
+            background-color: #fef3c7;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Notification Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            background: #1f2937;
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Error view */
+        .error-state {
+            display: none;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .error-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #1f2937;
+        }
+
+        .error-desc {
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        /* Loading skeleton */
+        .loading-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- File protocol warning if opened directly in file explorer -->
+        <div id="fileProtocolWarn" class="protocol-warning">
+            ⚠️ <strong>Sujhaav:</strong> Aapne file ko seedhe open kiya hai. Kripya browser me <strong>http://localhost:3000</strong> open karein taaki server API sahi se chale.
+        </div>
+
+        <!-- Top Bar Navigation -->
+        <div class="top-bar">
+            <a href="/" class="logo">
+                📝 <span>MyPastebin</span>
+            </a>
+            <a href="/" class="btn-home">
+                ➕ Naya Paste Banayein
+            </a>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="card loading-state">
+            <p>⏳ Paste load ho raha hai...</p>
+        </div>
+
+        <!-- Error State (404 ya doosri error) -->
+        <div id="errorState" class="card error-state">
+            <div class="error-icon">🔍</div>
+            <h2 class="error-title">Paste Nahi Mila</h2>
+            <p id="errorMessage" class="error-desc">Maaf kijiye, yeh paste link galat hai ya delete ho chuka hai.</p>
+            <a href="/" class="btn-tool btn-primary">Naya Paste Banayein</a>
+        </div>
+
+        <!-- Main Paste Container Card -->
+        <div id="pasteCard" class="card" style="display: none;">
+            <!-- Header Section: Title, Date, ID, Description -->
+            <div class="paste-header">
+                <div class="paste-meta">
+                    <span class="paste-badge" id="pasteIdBadge">ID: ------</span>
+                    <span id="createdDate">📅 --/--/----</span>
+                    <span id="updatedDate" style="display: none;">✏️ Edited</span>
+                </div>
+                <h1 id="pasteTitle" class="paste-title">Untitled Paste</h1>
+                <p id="pasteDescription" class="paste-description"></p>
+            </div>
+
+            <!-- Comment Box (Agar comment ho toh hi dikhega) -->
+            <div id="commentBox" class="comment-box">
+                <div class="comment-header">
+                    📌 <span>Comment / Note:</span>
+                </div>
+                <p id="commentText"></p>
+            </div>
+
+            <!-- Edit Mode Notice -->
+            <div id="editNotice" class="edit-notice">
+                ⚠️ Aap edit mode me hain. Naya content likhkar "Save" dabayein aur password enter karein.
+            </div>
+
+            <!-- Action Toolbar with 4 primary buttons: Copy, Replace, Save, Download + Cancel -->
+            <div class="toolbar">
+                <!-- 1. Copy Content Button -->
+                <button type="button" id="copyBtn" class="btn-tool" title="Content clipboard me copy karein">
+                    📋 Copy Content
+                </button>
+
+                <!-- 2. Replace / Edit Button -->
+                <button type="button" id="replaceBtn" class="btn-tool" title="Content editable banayein">
+                    ✏️ Replace
+                </button>
+
+                <!-- 3. Save Button -->
+                <button type="button" id="saveBtn" class="btn-tool btn-save" title="Password daal kar save karein">
+                    💾 Save
+                </button>
+
+                <!-- Cancel Button (Edit mode me dikhega) -->
+                <button type="button" id="cancelBtn" class="btn-tool btn-cancel" style="display: none;" title="Edit cancel karein">
+                    ❌ Cancel
+                </button>
+
+                <!-- 4. Download .txt Button -->
+                <button type="button" id="downloadBtn" class="btn-tool" title="Content ko .txt file me download karein">
+                    ⬇️ Download
+                </button>
+            </div>
+
+            <!-- Content Area: View Mode (<pre>) & Edit Mode (<textarea>) -->
+            <div class="content-box-container">
+                <pre id="contentPre" class="paste-content"></pre>
+                <textarea id="editArea" class="edit-content-area" spellcheck="false"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Frontend Script with Hindi Comments -->
+    <script>
+        // Check if file is opened via file:// protocol
+        if (window.location.protocol === 'file:') {
+            document.getElementById('fileProtocolWarn').style.display = 'block';
+        }
+
+        // Current paste ka data hold karne ke liye variable
+        let currentPasteData = null;
+        let isEditMode = false;
+
+        // URL se Paste ID extract kar rahe hain (Query param ?id=abc123 ya Pathname /abc123 dono se support)
+        const urlParams = new URLSearchParams(window.location.search);
+        let pasteId = urlParams.get('id');
+
+        if (!pasteId) {
+            const pathSegments = window.location.pathname.split('/').filter(Boolean);
+            const candidate = pathSegments[0] || '';
+            if (candidate && candidate !== 'view.html' && candidate !== 'index.html') {
+                pasteId = candidate;
+            }
+        }
+
+        // DOM elements select kar rahe hain
+        const loadingState = document.getElementById('loadingState');
+        const errorState = document.getElementById('errorState');
+        const errorMessage = document.getElementById('errorMessage');
+        const pasteCard = document.getElementById('pasteCard');
+        const pasteTitle = document.getElementById('pasteTitle');
+        const pasteDescription = document.getElementById('pasteDescription');
+        const pasteIdBadge = document.getElementById('pasteIdBadge');
+        const createdDate = document.getElementById('createdDate');
+        const updatedDate = document.getElementById('updatedDate');
+        const commentBox = document.getElementById('commentBox');
+        const commentText = document.getElementById('commentText');
+        const contentPre = document.getElementById('contentPre');
+        const editArea = document.getElementById('editArea');
+        const editNotice = document.getElementById('editNotice');
+
+        // Buttons
+        const copyBtn = document.getElementById('copyBtn');
+        const replaceBtn = document.getElementById('replaceBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const toast = document.getElementById('toast');
+
+        /**
+         * Page Load hone par Paste ka data fetch karna
+         */
+        async function fetchPaste() {
+            if (!pasteId) {
+                showError('Koi Paste ID specify nahi ki gayi.');
+                return;
+            }
+
+            try {
+                // Backend se GET /api/paste/:id call kar rahe hain
+                const response = await fetch(`/api/paste/${pasteId}`);
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Yeh paste nahi mila ya delete ho chuka hai.');
+                }
+
+                currentPasteData = await response.json();
+                renderPaste(currentPasteData);
+
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        /**
+         * Paste data ko UI par render karna
+         */
+        function renderPaste(data) {
+            loadingState.style.display = 'none';
+            errorState.style.display = 'none';
+            pasteCard.style.display = 'block';
+
+            // Document Title update karein
+            document.title = (data.title ? data.title + ' - ' : '') + 'MyPastebin';
+
+            // Title render karein (agar title na ho to default dikhayein)
+            pasteTitle.innerText = data.title || 'Untitled Paste';
+
+            // Description render karein (agar description na ho to hide karein)
+            if (data.description && data.description.trim() !== '') {
+                pasteDescription.innerText = data.description;
+                pasteDescription.style.display = 'block';
+            } else {
+                pasteDescription.style.display = 'none';
+            }
+
+            // ID badge
+            pasteIdBadge.innerText = `ID: ${data.id}`;
+
+            // Date format karein
+            if (data.createdAt) {
+                const dateObj = new Date(data.createdAt);
+                createdDate.innerText = `📅 ${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            }
+
+            // Updated date
+            if (data.updatedAt && data.updatedAt !== data.createdAt) {
+                updatedDate.style.display = 'inline';
+            } else {
+                updatedDate.style.display = 'none';
+            }
+
+            // Comment Box (agar comment ho toh hi yellow box dikhega)
+            if (data.comment && data.comment.trim() !== '') {
+                commentText.innerText = data.comment;
+                commentBox.style.display = 'block';
+            } else {
+                commentBox.style.display = 'none';
+            }
+
+            // Content render karein <pre> me (white-space: pre-wrap)
+            contentPre.textContent = data.content;
+            editArea.value = data.content;
+        }
+
+        /**
+         * Clipboard helper (with robust fallback)
+         */
+        async function copyTextToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } catch (e) {
+                    // fallback to execCommand
+                }
+            }
+            const tempArea = document.createElement('textarea');
+            tempArea.value = text;
+            tempArea.style.position = 'fixed';
+            tempArea.style.opacity = '0';
+            document.body.appendChild(tempArea);
+            tempArea.select();
+            let success = false;
+            try {
+                success = document.execCommand('copy');
+            } catch (err) {
+                success = false;
+            }
+            document.body.removeChild(tempArea);
+            return success;
+        }
+
+        /**
+         * Button 1: Copy Content
+         * Content ko direct clipboard me copy karta hai
+         */
+        async function copyContent() {
+            const contentToCopy = isEditMode ? editArea.value : contentPre.textContent;
+            const ok = await copyTextToClipboard(contentToCopy);
+            if (ok) {
+                showToast('📋 Content clipboard me copy ho gaya!');
+            } else {
+                alert('Content copy nahi ho saka.');
+            }
+        }
+        copyBtn.addEventListener('click', copyContent);
+        window.copyContent = copyContent;
+
+        /**
+         * Button 2: Replace
+         * Content ko editable banata hai (textarea me badalta hai)
+         */
+        function replaceContent() {
+            enterEditMode();
+        }
+        replaceBtn.addEventListener('click', replaceContent);
+        window.replaceContent = replaceContent;
+
+        function enterEditMode() {
+            isEditMode = true;
+            editArea.value = currentPasteData ? currentPasteData.content : contentPre.textContent;
+            
+            contentPre.style.display = 'none';
+            editArea.style.display = 'block';
+            editNotice.style.display = 'flex';
+
+            replaceBtn.style.display = 'none';
+            cancelBtn.style.display = 'inline-flex';
+
+            editArea.focus();
+            showToast('✏️ Edit mode chalu hai. Content badalkar "Save" dabayein.');
+        }
+
+        function exitEditMode() {
+            isEditMode = false;
+            contentPre.style.display = 'block';
+            editArea.style.display = 'none';
+            editNotice.style.display = 'none';
+
+            replaceBtn.style.display = 'inline-flex';
+            cancelBtn.style.display = 'none';
+        }
+
+        /**
+         * Cancel button handler
+         */
+        function cancelEdit() {
+            exitEditMode();
+            if (currentPasteData) {
+                editArea.value = currentPasteData.content;
+            }
+            showToast('❌ Edit cancel kar diya gaya.');
+        }
+        cancelBtn.addEventListener('click', cancelEdit);
+        window.cancelEdit = cancelEdit;
+
+        /**
+         * Button 3: Save (saveEdit)
+         * Password prompt() se leta hai aur PUT /api/paste/:id par bhejta hai
+         */
+        async function saveEdit() {
+            // Agar pehle se edit mode me nahi hain to edit mode open karein
+            if (!isEditMode) {
+                enterEditMode();
+                return;
+            }
+
+            const newContent = editArea.value;
+
+            if (!newContent || !newContent.trim()) {
+                alert('Content khali nahi ho sakta!');
+                return;
+            }
+
+            // Password ke liye popup prompt
+            const enteredPassword = prompt('Kripya paste update karne ke liye password dalein:');
+
+            // Agar user ne prompt cancel kar diya
+            if (enteredPassword === null) {
+                return;
+            }
+
+            if (!enteredPassword.trim()) {
+                alert('Password dalna anivarya hai!');
+                return;
+            }
+
+            saveBtn.disabled = true;
+            const originalSaveText = saveBtn.innerHTML;
+            saveBtn.innerText = '⏳ Saving...';
+
+            try {
+                // Backend API ko PUT request bhej rahe hain
+                const response = await fetch(`/api/paste/${currentPasteData.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: newContent,
+                        password: enteredPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // Agar galat password (401) ya koi aur error aayi to alert dikhao
+                    alert(data.error || 'Content save karne me error!');
+                    return;
+                }
+
+                // Safalta par current paste data update karo
+                currentPasteData.content = newContent;
+                currentPasteData.updatedAt = data.updatedAt || new Date().toISOString();
+                contentPre.textContent = newContent;
+                updatedDate.style.display = 'inline';
+
+                exitEditMode();
+                showToast('✅ Paste safaltapoorvak save aur update ho gaya!');
+
+            } catch (err) {
+                alert('Server error: ' + err.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalSaveText;
+            }
+        }
+        saveBtn.addEventListener('click', saveEdit);
+        window.saveEdit = saveEdit;
+
+        /**
+         * Button 4: Download
+         * Blob bana kar content ko <id>.txt file me download karta hai
+         */
+        function downloadPaste() {
+            const contentToDownload = isEditMode ? editArea.value : (currentPasteData ? currentPasteData.content : contentPre.textContent);
+            const filename = `${currentPasteData && currentPasteData.id ? currentPasteData.id : 'paste'}.txt`;
+
+            // Blob create kar rahe hain
+            const blob = new Blob([contentToDownload], { type: 'text/plain;charset=utf-8' });
+            const downloadUrl = URL.createObjectURL(blob);
+
+            // Anchor tag se automatic download trigger kar rahe hain
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(downloadUrl);
+
+            showToast(`⬇️ "${filename}" download ho gaya!`);
+        }
+        downloadBtn.addEventListener('click', downloadPaste);
+        window.downloadPaste = downloadPaste;
+
+        /**
+         * Toast notification dikhane ka helper function
+         */
+        let toastTimeout;
+        function showToast(message) {
+            clearTimeout(toastTimeout);
+            toast.innerText = message;
+            toast.classList.add('show');
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        /**
+         * Error state display karne ka helper function
+         */
+        function showError(msg) {
+            loadingState.style.display = 'none';
+            pasteCard.style.display = 'none';
+            errorState.style.display = 'block';
+            errorMessage.innerText = msg;
+        }
+
+        // Script shuru hote hi paste fetch karein
+        fetchPaste();
+    </script>
+</body>
+</html>

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pastebin - Quick & Simple Code Sharing</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* Global CSS Styles */
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: #eef2ff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --focus-ring: rgba(79, 70, 229, 0.25);
+            --danger: #ef4444;
+            --success: #10b981;
+            --success-bg: #ecfdf5;
+            --radius: 12px;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 780px;
+        }
+
+        /* Header Section */
+        header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .tagline {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        /* Form Card */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            padding: 32px;
+            transition: all 0.2s ease;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .required-badge {
+            color: var(--danger);
+            font-weight: 700;
+            margin-left: 4px;
+        }
+
+        .optional-tag {
+            font-size: 12px;
+            font-weight: normal;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-main);
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--focus-ring);
+        }
+
+        textarea.code-content {
+            font-family: 'JetBrains Mono', monospace, Consolas, Courier;
+            font-size: 13.5px;
+            min-height: 220px;
+            line-height: 1.5;
+            resize: vertical;
+            white-space: pre;
+            tab-size: 4;
+        }
+
+        textarea.comment-input {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        /* Button Styling */
+        .btn-submit {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-submit:active {
+            transform: scale(0.99);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        /* Result Link Box (Pehle jaisa simple & clean) */
+        .result-box {
+            display: none;
+            margin-top: 24px;
+            padding: 20px;
+            background-color: var(--success-bg);
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #065f46;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .link-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .link-display {
+            flex: 1;
+            min-width: 240px;
+            background: #fff;
+            padding: 10px 14px;
+            border: 1px solid #d1fae5;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: #047857;
+            word-break: break-all;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .link-display:hover {
+            text-decoration: underline;
+        }
+
+        .btn-action {
+            padding: 10px 16px;
+            font-size: 13.5px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-copy-link {
+            background-color: #047857;
+            color: white;
+        }
+
+        .btn-copy-link:hover {
+            background-color: #065f46;
+        }
+
+        .btn-open-link {
+            background-color: white;
+            color: #047857;
+            border-color: #6ee7b7;
+        }
+
+        .btn-open-link:hover {
+            background-color: #ecfdf5;
+        }
+
+        /* Error message */
+        .error-message {
+            display: none;
+            margin-top: 15px;
+            padding: 12px;
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            color: var(--danger);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        footer {
+            margin-top: 30px;
+            font-size: 13px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <a href="/" class="logo">
+                📝 <span>MyPastebin</span>
+            </a>
+            <p class="tagline">Apna code ya text paste karein aur instant shareable link banayein</p>
+        </header>
+
+        <!-- Main Form Card -->
+        <div class="card">
+            <form id="pasteForm">
+                <!-- Title Field -->
+                <div class="form-group">
+                    <label for="titleInput">
+                        Title <span class="optional-tag">(Optional)</span>
+                    </label>
+                    <input type="text" id="titleInput" placeholder="Jaise: Project Setup Notes ya Python Script" maxlength="100">
+                </div>
+
+                <!-- Description Field -->
+                <div class="form-group">
+                    <label for="descInput">
+                        Description <span class="optional-tag">(Optional)</span>
+                    </label>
+                    <input type="text" id="descInput" placeholder="Chhota description ya purpose..." maxlength="200">
+                </div>
+
+                <!-- Content Field (Mandatory) -->
+                <div class="form-group">
+                    <label for="contentInput">
+                        Content <span class="required-badge">* (Zaroori hai)</span>
+                    </label>
+                    <textarea id="contentInput" class="code-content" placeholder="Yahan apna text, code ya content paste karein..." required></textarea>
+                </div>
+
+                <!-- Comment / Note Field -->
+                <div class="form-group">
+                    <label for="commentInput">
+                        Comment / Note <span class="optional-tag">(Optional)</span>
+                    </label>
+                    <textarea id="commentInput" class="comment-input" placeholder="Koi vishesh note ya comment jo reader ke liye helpful ho..."></textarea>
+                </div>
+
+                <!-- Error Alert Box -->
+                <div id="errorBox" class="error-message"></div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="submitBtn" class="btn-submit">
+                    🔗 Create Link
+                </button>
+            </form>
+
+            <!-- Result Link Container (Original Clean Look) -->
+            <div id="resultBox" class="result-box">
+                <div class="result-title">
+                    ✅ Aapka Pastebin link taiyar hai!
+                </div>
+                <div class="link-row">
+                    <a id="pasteLink" href="#" target="_blank" class="link-display"></a>
+                    <button type="button" id="copyLinkBtn" class="btn-action btn-copy-link">
+                        📋 Copy Link
+                    </button>
+                    <a id="openLinkBtn" href="#" target="_blank" class="btn-action btn-open-link">
+                        ↗️ Open
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            Node.js &amp; Express Pastebin &bull; Fast, Secure &amp; Lightweight
+        </footer>
+    </div>
+
+    <!-- Frontend Script with Hindi Comments -->
+    <script>
+        // DOM Elements ko select kar rahe hain
+        const pasteForm = document.getElementById('pasteForm');
+        const titleInput = document.getElementById('titleInput');
+        const descInput = document.getElementById('descInput');
+        const contentInput = document.getElementById('contentInput');
+        const commentInput = document.getElementById('commentInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const resultBox = document.getElementById('resultBox');
+        const pasteLink = document.getElementById('pasteLink');
+        const copyLinkBtn = document.getElementById('copyLinkBtn');
+        const openLinkBtn = document.getElementById('openLinkBtn');
+        const errorBox = document.getElementById('errorBox');
+
+        // Form submit hone par handle karna
+        pasteForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Page reload hone se rokna
+
+            // Error box chupayein
+            errorBox.style.display = 'none';
+            errorBox.innerText = '';
+
+            const title = titleInput.value.trim();
+            const description = descInput.value.trim();
+            const content = contentInput.value;
+            const comment = commentInput.value.trim();
+
+            // Check karo ki content khali to nahi hai
+            if (!content.trim()) {
+                showError('Kripya content likhein, yeh zaroori hai!');
+                contentInput.focus();
+                return;
+            }
+
+            // Button ko loading state me daalo
+            submitBtn.disabled = true;
+            submitBtn.innerText = '⏳ Link ban raha hai...';
+
+            try {
+                // Backend API ko POST request bhej rahe hain
+                const response = await fetch('/api/paste', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        description: description,
+                        content: content,
+                        comment: comment
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Paste create karne me koi samasya aayi.');
+                }
+
+                // Unique link banayein (original tareeqe se: window.location.origin/id)
+                const fullUrl = `${window.location.origin}/${data.id}`;
+
+                // Link ko screen par dikhayein
+                pasteLink.href = fullUrl;
+                pasteLink.innerText = fullUrl;
+                openLinkBtn.href = fullUrl;
+                resultBox.style.display = 'block';
+
+                // Scroll karke result box par le jaayein
+                resultBox.scrollIntoView({ behavior: 'smooth' });
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                // Button ko wapas normal state me le aayein
+                submitBtn.disabled = false;
+                submitBtn.innerText = '🔗 Create Link';
+            }
+        });
+
+        // Safe clipboard copy function
+        async function copyToClipboardSafe(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } catch (e) {}
+            }
+            const temp = document.createElement('textarea');
+            temp.value = text;
+            temp.style.position = 'fixed';
+            temp.style.opacity = '0';
+            document.body.appendChild(temp);
+            temp.select();
+            let success = false;
+            try {
+                success = document.execCommand('copy');
+            } catch (err) {
+                success = false;
+            }
+            document.body.removeChild(temp);
+            return success;
+        }
+
+        // Copy Link button click handler
+        copyLinkBtn.addEventListener('click', async () => {
+            const urlToCopy = pasteLink.href;
+            const ok = await copyToClipboardSafe(urlToCopy);
+            if (ok) {
+                const originalText = copyLinkBtn.innerHTML;
+                copyLinkBtn.innerHTML = '✅ Copied!';
+                setTimeout(() => {
+                    copyLinkBtn.innerHTML = originalText;
+                }, 2000);
+            } else {
+                alert('Copy karne me error aayi.');
+            }
+        });
+
+        // Error display karne ka helper function
+        function showError(msg) {
+            errorBox.innerText = msg;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
