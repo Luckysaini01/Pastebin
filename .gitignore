@@ -7,3 +7,5 @@ pastes.db
 *.log
 pastes.db-wal
 pastes.db-shm
+
+.vercel

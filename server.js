@@ -6,9 +6,6 @@ const dotenv = require('dotenv');
 const os = require('os');
 const fs = require('fs');
 
-// SQLite database module (better-sqlite3: synchronous, fast aur reliable)
-const Database = require('better-sqlite3');
-
 // .env file se environment variables load karna
 dotenv.config({ path: path.join(__dirname, '.env') });
 
@@ -46,82 +43,76 @@ function getNetworkIp() {
 }
 
 // ==========================================
-// SQLITE DATABASE SETUP
+// JSON DATABASE (portable + serverless friendly)
 // ==========================================
 
-// SQLite database file ka path (pastes.db)
-const DB_FILE = path.join(__dirname, 'pastes.db');
+const DATA_DIR = path.join(__dirname, 'data');
+const DATA_FILE = path.join(DATA_DIR, 'pastes.json');
 
-// Database connection open kar rahe hain
-const db = new Database(DB_FILE);
-
-// Performance ke liye WAL mode enable karna
-db.pragma('journal_mode = WAL');
-
-// Pastes table create karna (agar pehle se exist na kare)
-db.exec(`
-    CREATE TABLE IF NOT EXISTS pastes (
-        id TEXT PRIMARY KEY,
-        title TEXT DEFAULT '',
-        description TEXT DEFAULT '',
-        content TEXT NOT NULL,
-        comment TEXT DEFAULT '',
-        createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
-    )
-`);
-
-console.log('✅ SQLite database ready: pastes.db');
-
-// ==========================================
-// PASTES.JSON SE DATA MIGRATE KARNA (Ek baar)
-// ==========================================
-
-const PASTES_JSON = path.join(__dirname, 'pastes.json');
-if (fs.existsSync(PASTES_JSON)) {
-    try {
-        const oldData = JSON.parse(fs.readFileSync(PASTES_JSON, 'utf-8'));
-        const ids = Object.keys(oldData);
-        if (ids.length > 0) {
-            // Pehle check karo database already populated hai ya nahi
-            const count = db.prepare('SELECT COUNT(*) as cnt FROM pastes').get();
-            if (count.cnt === 0) {
-                // Ek batch transaction me saara data insert karo
-                const insertStmt = db.prepare(`
-                    INSERT OR IGNORE INTO pastes (id, title, description, content, comment, createdAt, updatedAt)
-                    VALUES (@id, @title, @description, @content, @comment, @createdAt, @updatedAt)
-                `);
-                const migrate = db.transaction((pastes) => {
-                    for (const paste of pastes) {
-                        insertStmt.run(paste);
-                    }
-                });
-                migrate(ids.map(id => oldData[id]));
-                console.log(`✅ ${ids.length} pastes pastes.json se SQLite me migrate ho gaye!`);
-            }
-        }
-    } catch (err) {
-        console.error('Migration error (ignore karo agar pehli baar chal raha hai):', err.message);
+function ensureDataStore() {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(DATA_FILE)) {
+        fs.writeFileSync(DATA_FILE, '{}', 'utf8');
     }
 }
 
-// ==========================================
-// PREPARED STATEMENTS (Fast Queries)
-// ==========================================
+function readStore() {
+    ensureDataStore();
+    try {
+        const raw = fs.readFileSync(DATA_FILE, 'utf8');
+        return raw.trim() ? JSON.parse(raw) : {};
+    } catch (error) {
+        console.error('Database read error:', error.message);
+        return {};
+    }
+}
 
-// Ek paste fetch karne ka statement
-const stmtGetById = db.prepare('SELECT * FROM pastes WHERE id = ?');
+function writeStore(store) {
+    ensureDataStore();
+    fs.writeFileSync(DATA_FILE, JSON.stringify(store, null, 2), 'utf8');
+}
 
-// Naya paste insert karne ka statement
-const stmtInsert = db.prepare(`
-    INSERT INTO pastes (id, title, description, content, comment, createdAt, updatedAt)
-    VALUES (@id, @title, @description, @content, @comment, @createdAt, @updatedAt)
-`);
+function getPasteById(id) {
+    return readStore()[id] || null;
+}
 
-// Content update karne ka statement
-const stmtUpdate = db.prepare(`
-    UPDATE pastes SET content = @content, updatedAt = @updatedAt WHERE id = @id
-`);
+function savePaste(paste) {
+    const store = readStore();
+    store[paste.id] = paste;
+    writeStore(store);
+    return paste;
+}
+
+function updatePaste(id, updates) {
+    const store = readStore();
+    if (!store[id]) return null;
+    const updated = { ...store[id], ...updates };
+    store[id] = updated;
+    writeStore(store);
+    return updated;
+}
+
+console.log(`✅ JSON database ready: ${DATA_FILE}`);
+
+const legacyFile = path.join(__dirname, 'pastes.json');
+if (fs.existsSync(legacyFile)) {
+    try {
+        const legacyData = JSON.parse(fs.readFileSync(legacyFile, 'utf-8'));
+        const ids = Object.keys(legacyData);
+        if (ids.length > 0) {
+            const store = readStore();
+            if (Object.keys(store).length === 0) {
+                for (const id of ids) {
+                    store[id] = legacyData[id];
+                }
+                writeStore(store);
+                console.log(`✅ ${ids.length} pastes migrated from legacy JSON`);
+            }
+        }
+    } catch (error) {
+        console.error('Migration error (safe to ignore on first run):', error.message);
+    }
+}
 
 // Middleware
 app.use(express.json());
@@ -147,17 +138,18 @@ app.post('/api/paste', (req, res) => {
     const id = crypto.randomBytes(3).toString('hex');
     const now = new Date().toISOString();
 
+    const paste = {
+        id,
+        title: (title || '').trim(),
+        description: (description || '').trim(),
+        content,
+        comment: (comment || '').trim(),
+        createdAt: now,
+        updatedAt: now
+    };
+
     try {
-        // SQLite me naya paste insert karo
-        stmtInsert.run({
-            id,
-            title: (title || '').trim(),
-            description: (description || '').trim(),
-            content,
-            comment: (comment || '').trim(),
-            createdAt: now,
-            updatedAt: now
-        });
+        savePaste(paste);
     } catch (err) {
         console.error('Database insert error:', err);
         return res.status(500).json({ error: 'Paste save nahi ho saka.' });
@@ -179,7 +171,7 @@ app.post('/api/paste', (req, res) => {
 app.get('/api/paste/:id', (req, res) => {
     const { id } = req.params;
 
-    const paste = stmtGetById.get(id);
+    const paste = getPasteById(id);
     if (!paste) {
         return res.status(404).json({ error: 'Yeh paste nahi mila ya delete ho chuka hai.' });
     }
@@ -205,7 +197,7 @@ app.put('/api/paste/:id', (req, res) => {
     }
 
     // Pehle check karo paste exist karta hai
-    const existing = stmtGetById.get(id);
+    const existing = getPasteById(id);
     if (!existing) {
         return res.status(404).json({ error: 'Paste nahi mila.' });
     }
@@ -213,17 +205,19 @@ app.put('/api/paste/:id', (req, res) => {
     const updatedAt = new Date().toISOString();
 
     try {
-        stmtUpdate.run({ content, updatedAt, id });
+        const updated = updatePaste(id, { content, updatedAt });
+        if (!updated) {
+            return res.status(404).json({ error: 'Paste nahi mila.' });
+        }
+        return res.json({
+            success: true,
+            message: 'Content safaltapoorvak update ho gaya!',
+            updatedAt
+        });
     } catch (err) {
         console.error('Database update error:', err);
         return res.status(500).json({ error: 'Paste update nahi ho saka.' });
     }
-
-    res.json({
-        success: true,
-        message: 'Content safaltapoorvak update ho gaya!',
-        updatedAt
-    });
 });
 
 /**
@@ -245,20 +239,25 @@ app.get('/:id', (req, res, next) => {
 });
 
 // Server start karna (0.0.0.0 = sabhi network interfaces)
-app.listen(PORT, '0.0.0.0', () => {
-    const networkIp = getNetworkIp();
-    console.log(`===========================================`);
-    console.log(`🚀 Pastebin server chal raha hai!`);
-    console.log(`💻 Local URL:   http://localhost:${PORT}`);
-    console.log(`🌐 Network URL: http://${networkIp}:${PORT}`);
-    console.log(`🗄️  Database:   SQLite (pastes.db)`);
-    console.log(`🔑 Edit Password: ${EDIT_PASSWORD}`);
-    console.log(`===========================================`);
-});
+if (require.main === module) {
+    app.listen(PORT, '0.0.0.0', () => {
+        const networkIp = getNetworkIp();
+        console.log(`===========================================`);
+        console.log(`🚀 Pastebin server chal raha hai!`);
+        console.log(`💻 Local URL:   http://localhost:${PORT}`);
+        console.log(`🌐 Network URL: http://${networkIp}:${PORT}`);
+        console.log(`🗄️  Database:   JSON file (${DATA_FILE})`);
+        console.log(`🔑 Edit Password: ${EDIT_PASSWORD}`);
+        console.log(`===========================================`);
+    });
+}
 
 // Process band hone par database connection gracefully close karna
-process.on('SIGINT', () => {
-    db.close();
-    console.log('\n📴 Database connection band ho gaya. Server stop.');
-    process.exit(0);
-});
+if (require.main === module) {
+    process.on('SIGINT', () => {
+        console.log('\n📴 Server stop.');
+        process.exit(0);
+    });
+}
+
+module.exports = app;

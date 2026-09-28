@@ -9,11 +9,13 @@
   "scripts": {
     "start": "node server.js",
     "share": "cloudflared tunnel --url http://localhost:3000",
-    "share:lt": "npx --yes localtunnel --port 3000"
+    "share:lt": "npx --yes localtunnel --port 3000",
+    "build": "node -e \"console.log('Vercel build step not required for this app')\"",
+    "deploy:vercel": "npx vercel --prod"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "serverless-http": "^4.0.0"
   }
 }
